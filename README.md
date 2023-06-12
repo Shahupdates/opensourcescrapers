@@ -23,7 +23,7 @@ Include examples and descriptions of how to use your scraper. Provide as many ex
 
 ## Contributing
 
-We welcome contributions from the open-source community. If you're interested in contributing, please take a look at our [CONTRIBUTING.md](link-to-your-contributing.md-file) file for guidelines.
+We welcome contributions from the open-source community. If you're interested in contributing, pleaase feel free.
 
 ## Code of Conduct
 
