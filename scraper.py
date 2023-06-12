@@ -3,68 +3,96 @@ from bs4 import BeautifulSoup
 import time
 import logging
 import random
+import tkinter as tk
+import tkinter.filedialog
+from tkinter import messagebox
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
+from queue import Queue
+import threading
+import csv
 
-def scrape_website(url):
-    """
-    Function to scrape data from a website.
-    Args:
-        url (str): The URL of the website to be scraped.
-    Returns:
-        data: Extracted data from the HTML.
-    """
-    try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
-        }
-        session = requests.Session()
-        session.headers.update(headers)
+class WebScraper:
+    def __init__(self, gui, proxies=None, user_agent=None):
+        self.gui = gui
+        self.queue = Queue()
+        self.proxies = proxies
+        self.user_agent = user_agent or 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
 
-        retries = Retry(total=5, backoff_factor=0.1, status_forcelist=[500, 502, 503, 504])
-        session.mount('http://', HTTPAdapter(max_retries=retries))
+    def scrape_website(self, url):
+        try:
+            headers = {'User-Agent': self.user_agent}
+            session = requests.Session()
+            session.headers.update(headers)
 
-        response = session.get(url)
+            retries = Retry(total=5, backoff_factor=0.1, status_forcelist=[500, 502, 503, 504])
+            session.mount('http://', HTTPAdapter(max_retries=retries))
 
-        response.raise_for_status()  # Raise an exception if request fails
+            response = session.get(url, proxies=self.proxies)
 
-        soup = BeautifulSoup(response.text, 'html.parser')
+            response.raise_for_status()
 
-        # Replace this with actual scraping code
-        data = extract_data(soup)
+            soup = BeautifulSoup(response.text, 'html.parser')
 
-        # Logging the scraped data
-        logging.info(data)
+            data = self.extract_data(soup)
 
+            logging.info(data)
+            
+            self.gui.add_data(data)
+
+            return data
+
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Error occurred while scraping {url}: {e}")
+            return None
+
+    def extract_data(self, soup):
+        data = soup.prettify()
         return data
 
-    except requests.exceptions.RequestException as e:
-        # Log the error and handle it gracefully
-        logging.error(f"Error occurred while scraping {url}: {e}")
-        return None
+    def add_to_queue(self, url):
+        self.queue.put(url)
 
-def extract_data(soup):
-    """
-    Function to extract specific data from the BeautifulSoup object.
-    Args:
-        soup (BeautifulSoup): The parsed HTML object.
-    Returns:
-        data: Extracted data from the HTML.
-    """
-    # Replace this with your data extraction logic
-    data = soup.prettify()
-    return data
+    def start_scraping(self):
+        while not self.queue.empty():
+            url = self.queue.get()
+            threading.Thread(target=self.scrape_website, args=(url,)).start()
+
+class GUI:
+    def __init__(self, root):
+        self.root = root
+        self.scraper = WebScraper(self)
+
+        # Set up GUI
+        self.entry = tk.Entry(root)
+        self.entry.pack()
+        self.button = tk.Button(root, text='Scrape', command=self.scrape)
+        self.button.pack()
+        self.export_button = tk.Button(root, text='Export to CSV', command=self.export)
+        self.export_button.pack()
+        self.text = tk.Text(root)
+        self.text.pack()
+
+    def scrape(self):
+        url = self.entry.get()
+        if url:
+            self.scraper.add_to_queue(url)
+            self.scraper.start_scraping()
+        else:
+            messagebox.showwarning("No URL", "Please enter a URL.")
+
+    def add_data(self, data):
+        self.text.insert('end', data)
+
+    def export(self):
+        filename = tkinter.filedialog.asksaveasfilename(defaultextension=".csv")
+        with open(filename, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerows(self.text.get(1.0, 'end-1c').splitlines())
 
 if __name__ == "__main__":
-    # Configure logging
     logging.basicConfig(filename='scraper.log', level=logging.INFO)
 
-    url = "http://example.com"  # Replace with the website you want to scrape
-
-    # Scrape the website
-    scraped_data = scrape_website(url)
-
-    if scraped_data:
-        print(scraped_data)
-    else:
-        print("Scraping failed. Please check the logs for more details.")
+    root = tk.Tk()
+    gui = GUI(root)
+    root.mainloop()
