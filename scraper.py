@@ -19,7 +19,7 @@ def scrape_website(url):
         soup = BeautifulSoup(response.text, 'html.parser')
 
         # Replace this with actual scraping code
-        data = soup.prettify()
+        data = extract_data(soup)
 
         # Logging the scraped data
         logging.info(data)
@@ -30,6 +30,18 @@ def scrape_website(url):
         # Log the error and handle it gracefully
         logging.error(f"Error occurred while scraping {url}: {e}")
         return None
+
+def extract_data(soup):
+    """
+    Function to extract specific data from the BeautifulSoup object.
+    Args:
+        soup (BeautifulSoup): The parsed HTML object.
+    Returns:
+        data: Extracted data from the HTML.
+    """
+    # Replace this with your data extraction logic
+    data = soup.prettify()
+    return data
 
 if __name__ == "__main__":
     # Configure logging
