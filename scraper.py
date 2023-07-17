@@ -1,8 +1,10 @@
 import requests
+import urllib.parse
 from bs4 import BeautifulSoup
 import time
 import logging
 import random
+import concurrent.futures
 import tkinter as tk
 import tkinter.filedialog
 from tkinter import messagebox
@@ -64,12 +66,17 @@ class WebScraper:
         return data
 
     def add_to_queue(self, url):
-        self.queue.put(url)
-
+        parsed_url = urllib.parse.urlparse(url)
+        if parsed_url.scheme and parsed_url.netloc:
+            self.queue.put(url)
+        else:
+            print(f"Invalid URL: {url}")
+            
     def start_scraping(self):
-        while not self.queue.empty():
-            url = self.queue.get()
-            threading.Thread(target=self.scrape_website, args=(url,)).start()
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            while not self.queue.empty():
+                url = self.queue.get()
+                executor.submit(self.scrape_website, url)
 
 class GUI:
     def __init__(self, root):
