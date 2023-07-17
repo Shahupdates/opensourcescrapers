@@ -62,7 +62,9 @@ class WebScraper:
             return None
 
     def extract_data(self, soup):
-        data = soup.prettify()
+        title = soup.title.text.strip()
+        paragraphs = [p.text.strip() for p in soup.find_all('p')]
+        data = {'title': title, 'paragraphs': paragraphs}
         return data
 
     def add_to_queue(self, url):
